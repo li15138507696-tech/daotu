@@ -1,0 +1,39 @@
+modLoader = "javafml"
+loaderVersion = "[1,)"
+license = "All Rights Reserved"
+
+[[mods]]
+modId = "daotu"
+version="1.8.2"
+displayName = "蛊真人道途"
+description = '''
+蛊真人附属「道途」：开窍之后，通过战斗、游历、修炼积累历练，选择并锁定本世成长。
+每五次抽选可接取战斗、探索或修炼试炼，完成后获得额外历练。
+
+按 M 打开道途界面。与「天命」附属可同装，互不干扰。
+'''
+authors = "daotu"
+
+[[dependencies.daotu]]
+modId = "neoforge"
+type = "required"
+versionRange = "[21.1.232,)"
+ordering = "NONE"
+side = "BOTH"
+
+[[dependencies.daotu]]
+modId = "minecraft"
+type = "required"
+versionRange = "[1.21.1,1.22)"
+ordering = "NONE"
+side = "BOTH"
+
+[[dependencies.daotu]]
+modId = "guzhenren"
+type = "required"
+versionRange = "[0.1,)"
+ordering = "AFTER"
+side = "BOTH"
+
+[[mixins]]
+config = "daotu.mixins.json"

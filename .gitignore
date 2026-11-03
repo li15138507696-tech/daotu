@@ -1,0 +1,21 @@
+# 构建产物
+build/
+out/
+*.jar
+!gradle/wrapper/gradle-wrapper.jar
+
+# 逆向/审计工作区（javap 快照等，数 MB）
+_crash*/
+_reverse/
+.dsh/
+.dsh-plugins/
+.gradle/
+.idea/
+.vscode/
+run/
+logs/
+
+# 系统垃圾
+Thumbs.db
+desktop.ini
+.DS_Store
