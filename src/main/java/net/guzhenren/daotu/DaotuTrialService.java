@@ -14,7 +14,7 @@ public final class DaotuTrialService {
     }
 
     public static void accept(ServerPlayer player, int runId, int milestone, String typeId) {
-        if (!DaotuOpening.hasOpenedQiao(player) || runId != DaotuRun.runId(player)) return;
+        if (runId != DaotuRun.runId(player)) return;
         DaotuTrial.Type type = DaotuTrial.Type.byId(typeId);
         DaotuTrial.Snapshot state = DaotuRun.trialSnapshot(player);
         if (type == null || !state.ready() || state.nextMilestone() != milestone) return;
@@ -43,7 +43,6 @@ public final class DaotuTrialService {
     }
 
     private static void record(ServerPlayer player, int delta, String biome, boolean meditation) {
-        if (!DaotuOpening.hasOpenedQiao(player)) return;
         int milestone = DaotuRun.trialMilestone(player);
         if (milestone <= 0 || DaotuRun.trialType(player).isEmpty()
                 || DaotuRun.trialCompleted(player)) return;

@@ -136,12 +136,7 @@ public final class DaotuRun {
     }
 
     /** 只读本体转数（1..5）。绝不写回。 */
-    public static double zhuanshu(Player player) {
-        if (!(player instanceof net.minecraft.server.level.ServerPlayer sp)) {
-            return 1.0;
-        }
-        return sp.getData(net.guzhenren.network.GuzhenrenModVariables.PLAYER_VARIABLES).zhuanshu;
-    }
+    public static double zhuanshu(Player player) { return 1.0; }
 
     // ---------------------------------------------------------------- 属性
 

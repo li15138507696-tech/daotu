@@ -37,8 +37,7 @@ public final class DaotuEvents {
      */
     @SubscribeEvent
     public static void onServerStarted(net.neoforged.neoforge.event.server.ServerStartedEvent event) {
-        DaotuCoreVersion version = DaotuCoreVersion.detect();
-        DaotuMod.LOGGER.info("[道途] {}；本次会话按该版本的能力集运行", version.describe());
+        DaotuMod.LOGGER.info("[道途] 通用版：独立成长模式");
     }
 
     @SubscribeEvent

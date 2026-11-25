@@ -38,20 +38,12 @@ public final class DaotuNet {
      * {@code DaotuViewScreen} 的「自动弹窗」。
      */
     public static void promptChoice(ServerPlayer player) {
-        boolean auto = DaotuRun.autoPrompt(player);
-        DaotuMod.LOGGER.debug("[道途] {} 攒满触发：autoPrompt={}（false 时只发聊天提示）",
-                player.getScoreboardName(), auto);
-        if (auto) {
-            send(player, true);
-            return;
-        }
-        // 不弹窗：把状态推过去（已开着界面就原地刷新），再给一条聊天提示
         send(player, false);
-        player.displayClientMessage(Component.literal(
-                "§6[道途] §e历练已满，按 §fM §e打开道途选择升级"), false);
+        player.displayClientMessage(Component.literal("§6[道途] §e历练已满，输入 /daotu 打开道途选择升级"), false);
     }
 
     private static void send(ServerPlayer player, boolean open) {
+        DaotuDraw.repairOffer(player);
         // 待选候选
         List<DaotuStatePayload.Offer> offer = new ArrayList<>();
         for (DaotuDrawTable.Candidate c : DaotuDraw.pendingOffer(player)) {
@@ -70,7 +62,7 @@ public final class DaotuNet {
                 DaotuDraw.pendingDrawIndex(player),
                 DaotuRun.history(player),
                 DaotuRun.buffs(player),
-                DaotuOpening.hasOpenedQiao(player),
+                true,
                 DaotuRun.autoPrompt(player),
                 DaotuMainDao.of(player),
                 DaotuDraw.capOf(player),

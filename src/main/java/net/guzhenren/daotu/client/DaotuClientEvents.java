@@ -57,7 +57,7 @@ public final class DaotuClientEvents {
     @SubscribeEvent
     public static void onLoggingOut(net.neoforged.neoforge.client.event.ClientPlayerNetworkEvent.LoggingOut event) {
         lastRequestTick = NO_REQUEST;
-        DaotuClientHandler.clearPending();
+
     }
 
     /**
@@ -83,10 +83,11 @@ public final class DaotuClientEvents {
                 mc.setScreen(null);
                 continue;
             }
+            if (mc.screen != null) continue;
             lastRequestTick = mc.player.tickCount;
             PacketDistributor.sendToServer(new DaotuRequestPayload());
         }
         // 之前因为开着箱子/聊天而挂起的自动弹窗，等界面关掉再开
-        DaotuClientHandler.flushPending();
+
     }
 }

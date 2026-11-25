@@ -57,43 +57,29 @@ public final class DaotuMigrate {
      * @return true 表示本次做了迁移
      */
     public static boolean migrateIfNeeded(ServerPlayer player) {
-        if (DaotuData.migrated(player)) {
-            return false;
-        }
-
-        int draws = 0;
-        String note;
-
-        String oldOrigin = DaotuData.origin(player);
-        int maxRank = highestLegacyRank(player);
-
-        if (maxRank > 0) {
-            // 1.1.0+ 存档：按最高阶折算（比出身更准，优先）
-            draws = RANK_TO_DRAWS[Math.min(maxRank, RANK_TO_DRAWS.length - 1)];
-            note = "旧存档十六路最高 §e第 " + maxRank + " 阶";
-        } else if (!oldOrigin.isEmpty()) {
-            // 1.0.0 存档：按出身折算
-            draws = ORIGIN_TO_DRAWS.getOrDefault(oldOrigin, 4);
-            note = "旧存档出身 §e" + oldOrigin;
-        } else {
-            // 新号
+        if (DaotuData.migrated(player) || !DaotuRun.offer(player).isEmpty()) return false;
+        String origin = DaotuData.origin(player);
+        int rank = highestLegacyRank(player);
+        if (rank <= 0 && origin.isEmpty()) return false;
+        int target = rank > 0 ? RANK_TO_DRAWS[Math.min(rank, 5)] : ORIGIN_TO_DRAWS.getOrDefault(origin, 4);
+        // Existing draws count toward the legacy entitlement, preventing duplicate conversion.
+        int existing = DaotuRun.draws(player);
+        int count = Math.max(0, target - existing);
+        // Unnumbered pre-existing growth cannot be distinguished safely from old conversion.
+        if (existing == 0 && (!DaotuRun.attrs(player).isEmpty() || !DaotuRun.history(player).isEmpty())) count = 0;
+        var original = DaotuData.root(player, false).copy();
+        try {
+            DaotuDraw.replayForMigration(player, count);
             DaotuData.markMigrated(player);
+        } catch (RuntimeException ex) {
+            player.getPersistentData().put(DaotuData.ROOT, original);
+            DaotuMod.LOGGER.warn("旧成长折算失败，原数据已恢复，下次重试", ex);
             return false;
         }
-
-        DaotuData.clearOrigin(player);
-        DaotuData.markMigrated(player);
-
-        // 补发流程自己逐次递增 draws；不能在补发前预加一次。
-        DaotuDraw.replayForMigration(player, draws);
-
-        DaotuGrowthApply.refreshTitles(player);
         DaotuAttributes.sync(player);
-
-        player.displayClientMessage(Component.literal(
-                "§6[道途] " + note + " §6已折算为 §e" + draws
-                        + " §6次抽选，属性已按新规则重算。按 §eM §6查看与重选。"), false);
-        return true;
+        if (count > 0) player.displayClientMessage(Component.literal(
+                "§6[道途] 旧成长已折算为 " + count + " 次独立属性成长。"), false);
+        return count > 0;
     }
 
     /** 读旧存档里 16 路的最大阶位（v2 起不再写入，只用于迁移）。 */

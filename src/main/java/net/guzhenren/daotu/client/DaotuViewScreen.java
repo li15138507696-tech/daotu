@@ -41,7 +41,7 @@ import net.neoforged.neoforge.network.PacketDistributor;
  *   ├────────────────────────────────────────┤
  *   │ 已获属性 / 特殊增益 / 抽选历史（滚动）     │  列表区
  *   ├────────────────────────────────────────┤
- *   │ 击杀·游历·修炼皆积历练  [自动弹窗◉] M 关闭 │  页脚
+ *   │ 击杀·游历·修炼皆积历练  [自动弹窗◉] Esc 关闭 │  页脚
  *   └────────────────────────────────────────┘
  * </pre>
  *
@@ -279,9 +279,9 @@ public class DaotuViewScreen extends Screen {
             }
         }
 
-        // 页脚右组：「主修」按钮 + 「自动弹窗」开关 + 「M 关闭」（都右对齐）
+        // 页脚右组：「主修」按钮 + 「自动弹窗」开关 + 「Esc 关闭」（都右对齐）
         // 顺序从右往左排：关闭提示在最右，开关挨着它，主修按钮在最左。
-        int closeW = font.width("M 关闭");
+        int closeW = font.width("Esc 关闭");
         int closeX = panelRight - 10 - closeW;
         toggleX1 = closeX - 10;
         toggleX0 = toggleX1 - toggleWidth();
@@ -365,7 +365,7 @@ public class DaotuViewScreen extends Screen {
 
     /** 开关上的文字：带状态，免得只靠滑块位置看不懂开还是关。 */
     private String toggleLabel() {
-        return "自动弹窗 " + (autoPrompt ? "开" : "关");
+        return "自动弹窗已停用";
     }
 
     /** 「自动弹窗」开关宽度：左内边距 + 文字 + 间隙 + 轨道 + 右内边距。 */
@@ -434,7 +434,7 @@ public class DaotuViewScreen extends Screen {
             rows.add(Row.kv("  下一试炼", "第 " + trial.nextMilestone() + " 抽后解锁"));
         }
         // ---- 已获属性 ----
-        rows.add(Row.header("已获属性 · 转世清空"));
+        rows.add(Row.header("已获属性 · 独立保存"));
         if (attrs.isEmpty()) {
             rows.add(Row.kv("  尚无", "抽选后在此显示"));
         } else {
@@ -448,19 +448,19 @@ public class DaotuViewScreen extends Screen {
         }
 
         // ---- 特殊增益 ----
-        rows.add(Row.header("特殊增益 · 整局常驻"));
+        rows.add(Row.header("旧版特殊增益 · 通用版暂停"));
         if (buffs.isEmpty()) {
-            rows.add(Row.kv("  尚无", "每 10 抽一次"));
+            rows.add(Row.kv("  尚无", "旧数据保留"));
         } else {
             for (String b : buffs) {
-                rows.add(Row.kv("  ◆ " + buffName(b), "常驻"));
+                rows.add(Row.kv("  ◆ " + buffName(b), "已暂停"));
             }
         }
 
         // ---- 抽选历史 ----
         rows.add(Row.header("抽选历史 · 已锁定不可改"));
         if (history.isEmpty()) {
-            rows.add(Row.kv("  尚无", "攒满历练后弹出选择"));
+            rows.add(Row.kv("  尚无", "攒满历练后输入 /daotu"));
         } else {
             // 最新的在上面
             for (int i = history.size() - 1; i >= 0; i--) {
@@ -571,7 +571,7 @@ public class DaotuViewScreen extends Screen {
         chip(g, panelLeft + 8, titleY0 + 6, zhuanText(zhuanshu), C_ACCENT);
 
         // 右侧：第几世 · 几抽
-        String right = "第 " + (runId + 1) + " 世 · " + draws + " 抽";
+        String right = "独立成长 · " + draws + " 抽";
         g.drawString(font, right, panelRight - 8 - font.width(right),
                 titleY0 + 6, C_DIM, true);
 
@@ -815,7 +815,7 @@ public class DaotuViewScreen extends Screen {
 
     private void drawFooter(GuiGraphics g, int mouseX, int mouseY) {
         int y = listBottom + 5;
-        String left = hasOffer() ? "选定即锁定 · 不可更改" : "击杀 · 游历 · 修炼 皆积历练";
+        String left = hasOffer() ? "选定即锁定 · 不可更改" : "击杀 · 游历 · 在线积历练";
         // v1.5.0：一转~五转每转 100 抽，到顶后历练停止累计——必须在界面上说清楚，
         // 否则玩家只会以为「打怪不给经验了」。
         if (atCap()) {
@@ -824,10 +824,9 @@ public class DaotuViewScreen extends Screen {
         g.drawString(font, left, panelLeft + 10, y,
                 hasOffer() || atCap() ? C_GOLD : C_DISABLED, true);
 
-        drawMainDaoButton(g, mouseX, mouseY);
-        drawAutoPromptToggle(g, mouseX, mouseY);
 
-        String right = "M 关闭";
+
+        String right = "Esc 关闭";
         g.drawString(font, right, panelRight - 10 - font.width(right), y, C_DIM, true);
 
         // 主修弹层画在最上层（盖住列表底部也认了，它本来就该挡住）
@@ -937,23 +936,6 @@ public class DaotuViewScreen extends Screen {
                 closeMainPopup();
                 return true;
             }
-            // 页脚「主修」按钮：打开选择弹层
-            if (mx >= mainX0 && mx < mainX1 && my >= mainY0 && my < mainY1) {
-                openMainPopup();
-                Minecraft.getInstance().getSoundManager().play(
-                        SimpleSoundInstance.forUI(SoundEvents.UI_BUTTON_CLICK, 1.0F));
-                return true;
-            }
-            // 页脚开关：先翻本地（点了立刻有反馈），再交给服务端定夺
-            if (mx >= toggleX0 && mx < toggleX1 && my >= toggleY0 && my < toggleY1) {
-                autoPrompt = !autoPrompt;
-                // 先写客户端偏好（立刻生效、且重进游戏还记得），再同步给服务端
-                DaotuClientPrefs.setAutoPrompt(autoPrompt);
-                PacketDistributor.sendToServer(new DaotuSettingPayload(autoPrompt));
-                Minecraft.getInstance().getSoundManager().play(
-                        SimpleSoundInstance.forUI(SoundEvents.UI_BUTTON_CLICK, 1.0F));
-                return true;
-            }
             for (TrialHit hit : trialHit) {
                 if (mx >= hit.x0() && mx < hit.x1()
                         && my >= hit.y0() && my < hit.y1()) {
@@ -966,7 +948,8 @@ public class DaotuViewScreen extends Screen {
             }            // 候选行：点一下就提交，之后无法更改
             for (int[] h : offerHit) {
                 if (mx >= h[0] && mx < h[2] && my >= h[1] && my < h[3]) {
-                    PacketDistributor.sendToServer(new DaotuPickPayload(offerDraw, h[4]));
+                    var selected = offer.get(h[4]);
+                    PacketDistributor.sendToServer(new DaotuPickPayload(offerDraw, h[4], selected.key(), selected.amount(), selected.percent()));
                     return true;
                 }
             }
@@ -1170,7 +1153,7 @@ public class DaotuViewScreen extends Screen {
     private static String zhuanText(double z) {
         int n = (int) Math.round(z);
         return switch (n) {
-            case 1 -> "一转";
+            case 1 -> "独立成长";
             case 2 -> "二转";
             case 3 -> "三转";
             case 4 -> "四转";

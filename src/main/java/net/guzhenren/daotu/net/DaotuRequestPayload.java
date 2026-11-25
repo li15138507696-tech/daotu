@@ -33,11 +33,7 @@ public record DaotuRequestPayload() implements CustomPacketPayload {
     public static void handle(DaotuRequestPayload payload, IPayloadContext context) {
         context.enqueueWork(() -> {
             if (context.player() instanceof ServerPlayer sp) {
-                if (!DaotuOpening.hasOpenedQiao(sp)) {
-                    sp.displayClientMessage(
-                            Component.literal("§7需以希望蛊开窍，方可踏上仙途"), false);
-                    return;
-                }
+
                 // 玩家按 M 主动请求：客户端一定打开界面
                 DaotuNet.openState(sp);
             }

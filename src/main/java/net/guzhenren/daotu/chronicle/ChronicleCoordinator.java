@@ -121,7 +121,7 @@ public final class ChronicleCoordinator {
             return 0;
         }
         if (loaded.isEmpty()) {
-            source.sendSuccess(() -> Component.literal("[道途·纪事] 尚无记录；开窍后每 20 tick 自动采样一次"), false);
+            source.sendSuccess(() -> Component.literal("[道途·纪事] 尚无旧记录；通用版已暂停本体采样"), false);
             return 1;
         }
         ChronicleState state = loaded.get();

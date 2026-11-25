@@ -79,6 +79,22 @@ public final class DaotuRunAttributes {
         };
     }
 
+    /** Only finite, correctly signed and typed rewards from the independent attribute set. */
+    public static boolean isValidReward(String key, double amount, boolean percent) {
+        return MODIFIER_IDS.containsKey(key) && Double.isFinite(amount)
+                && (key.equals("fall_damage_multiplier") ? amount < 0 : amount > 0)
+                && percent == isPercent(key);
+    }
+
+    public static boolean canGrant(Player player, String key, double amount, boolean percent) {
+        if (!isValidReward(key, amount, percent)) return false;
+        Holder<Attribute> attribute = attributeOf(key);
+        if (attribute == null || player.getAttribute(attribute) == null) return false;
+        double current = DaotuRun.attr(player, key), cap = capOf(key);
+        if (!Double.isFinite(current)) return false;
+        return cap <= 0.0 || current < cap;
+    }
+
     /**
      * 累加一个抽选结果。
      *

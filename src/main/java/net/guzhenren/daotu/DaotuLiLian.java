@@ -3,8 +3,6 @@ package net.guzhenren.daotu;
 import java.util.ArrayList;
 import java.util.List;
 
-import net.guzhenren.network.GuzhenrenModVariables;
-import net.guzhenren.network.GuzhenrenModVariables.PlayerVariables;
 import net.minecraft.core.BlockPos;
 import net.minecraft.network.chat.Component;
 import net.minecraft.server.level.ServerPlayer;
@@ -232,9 +230,6 @@ public final class DaotuLiLian {
      */
     public static void award(ServerPlayer player, double combat, double travel,
                              double cultivate, String reason) {
-        if (!DaotuOpening.hasOpenedQiao(player)) {
-            return;
-        }
         double gain = combat + travel + cultivate;
         if (gain <= 0.0) {
             return;

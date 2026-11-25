@@ -51,9 +51,13 @@ public class DaotuMod {
     public DaotuMod(IEventBus modBus, ModContainer container) {
         modBus.addListener(DaotuMod::registerPayloads);
         NeoForge.EVENT_BUS.register(DaotuEvents.class);
+        NeoForge.EVENT_BUS.addListener((net.neoforged.neoforge.event.RegisterCommandsEvent event) ->
+                event.getDispatcher().register(net.minecraft.commands.Commands.literal("daotu")
+                        .executes(context -> { DaotuNet.openState(context.getSource().getPlayerOrException()); return 1; })));
+
         var chronicleRepository = new net.guzhenren.daotu.chronicle.NbtChronicleRepository();
         var chronicle = new net.guzhenren.daotu.chronicle.ChronicleCoordinator(
-                new net.guzhenren.daotu.chronicle.Core1020Adapter(), chronicleRepository,
+                player -> java.util.Optional.empty(), chronicleRepository,
                 java.util.List.of(new net.guzhenren.daotu.chronicle.FactionJournalModule(),
                         new net.guzhenren.daotu.chronicle.MeritArchiveModule(),
                         new net.guzhenren.daotu.chronicle.ReputationJournalModule()));
@@ -68,7 +72,7 @@ public class DaotuMod {
 
     private static void registerPayloads(RegisterPayloadHandlersEvent event) {
         // v1.7.0：状态包新增试炼快照和接取包，协议号递增，避免新旧端解码错位。
-        PayloadRegistrar registrar = event.registrar("4");
+        PayloadRegistrar registrar = event.registrar("6");
         registrar.playToClient(DaotuStatePayload.TYPE, DaotuStatePayload.STREAM_CODEC,
                 DaotuStatePayload::handle);
         registrar.playToServer(DaotuRequestPayload.TYPE, DaotuRequestPayload.STREAM_CODEC,

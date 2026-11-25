@@ -22,7 +22,7 @@ import net.neoforged.neoforge.network.handling.IPayloadContext;
  * <p><b>不信任客户端数值</b>：服务端从 {@code run/offer} 读回候选列表，
  * 客户端发来的只有下标。
  */
-public record DaotuPickPayload(int drawIndex, int candidateIndex)
+public record DaotuPickPayload(int drawIndex, int candidateIndex, String expectedKey, double expectedAmount, boolean expectedPercent)
         implements CustomPacketPayload {
 
     public static final Type<DaotuPickPayload> TYPE =
@@ -33,8 +33,11 @@ public record DaotuPickPayload(int drawIndex, int candidateIndex)
                     (buf, p) -> {
                         buf.writeVarInt(p.drawIndex);
                         buf.writeVarInt(p.candidateIndex);
+                        buf.writeUtf(p.expectedKey, 128);
+                        buf.writeDouble(p.expectedAmount);
+                        buf.writeBoolean(p.expectedPercent);
                     },
-                    buf -> new DaotuPickPayload(buf.readVarInt(), buf.readVarInt()));
+                    buf -> new DaotuPickPayload(buf.readVarInt(), buf.readVarInt(), buf.readUtf(128), buf.readDouble(), buf.readBoolean()));
 
     @Override
     public Type<? extends CustomPacketPayload> type() {
@@ -50,7 +53,19 @@ public record DaotuPickPayload(int drawIndex, int candidateIndex)
                             payload.drawIndex(), DaotuDraw.pendingDrawIndex(sp));
                     return;
                 }
-                DaotuDraw.choose(sp, payload.candidateIndex());
+                if (DaotuDraw.repairOffer(sp)) {
+                    if (net.guzhenren.daotu.DaotuRun.offer(sp).isEmpty()) DaotuDraw.tryDraw(sp);
+                    net.guzhenren.daotu.DaotuNet.sendState(sp);
+                    return;
+                }
+                var offer = DaotuDraw.pendingOffer(sp);
+                int index = payload.candidateIndex();
+                if (index < 0 || index >= offer.size()) return;
+                var candidate = offer.get(index);
+                if (!candidate.key().equals(payload.expectedKey())
+                        || Double.compare(candidate.amount(), payload.expectedAmount()) != 0
+                        || candidate.percent() != payload.expectedPercent()) return;
+                DaotuDraw.choose(sp, index);
             }
         });
     }

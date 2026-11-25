@@ -11,12 +11,7 @@ public final class DaotuRuntime {
     public static void onTick(ServerPlayer player) {
         if (player.tickCount % PERIOD != 0) return;
         try {
-            boolean opened = DaotuOpening.hasOpenedQiao(player);
-            if (opened) {
-                DaotuLiLian.onSecond(player);
-                // Native procedures can clear all effects: missing reward buffs still recover each second.
-                DaotuBuffs.maintain(player);
-            }
+            DaotuLiLian.onSecond(player);
             // No luck-cap source has existed since 1.4.0. Do not fetch native data for that dead path.
             if (player.tickCount % (PERIOD * 5) == 0) {
                 DaotuAttributes.sync(player);

@@ -60,7 +60,7 @@ public final class DaotuDraw {
      * 所以「一转」与「一世」在这里是同一件事，{@code run/draws} 也是每世归零。
      */
     public static int capOf(double zhuanshu) {
-        return zhuanshu <= 5.0 ? PER_ZHUAN_CAP : Integer.MAX_VALUE;
+        return Integer.MAX_VALUE;
     }
 
     /** 当前玩家的抽选上限。 */
@@ -79,9 +79,6 @@ public final class DaotuDraw {
      * <p><b>不扣池、不发奖</b>——真正的结算在 {@link #choose}。
      */
     public static int tryDraw(ServerPlayer player) {
-        if (!DaotuOpening.hasOpenedQiao(player)) {
-            return 0;
-        }
         // 已达本转抽选上限：不再生成候选。池由 DaotuLiLian 停止累计，
         // 这里只兜底（防止上限是后来调小的，旧存档池子已经很高）。
         if (atCap(player)) {
@@ -125,14 +122,18 @@ public final class DaotuDraw {
      * @return 是否成功（候选不存在 / 池不够 / 下标越界都返回 false）
      */
     public static boolean choose(ServerPlayer player, int index) {
-        if (!DaotuOpening.hasOpenedQiao(player)) {
+        // Reject stale indices if the offer needed repair; never map an old index to a new row.
+        if (repairOffer(player)) {
+            if (DaotuRun.offer(player).isEmpty()) tryDraw(player);
+            DaotuNet.sendState(player);
             return false;
         }
         List<DaotuDrawTable.Candidate> cands = pendingOffer(player);
         if (cands.isEmpty()) {
             return false;
         }
-        if (index < 0 || index >= cands.size()) {
+        if (index < 0 || index >= cands.size() || !valid(cands.get(index))
+                || !DaotuRunAttributes.canGrant(player, cands.get(index).key(), cands.get(index).amount(), cands.get(index).percent())) {
             return false;
         }
         double threshold = DaotuRun.thresholdOf(player);
@@ -141,6 +142,7 @@ public final class DaotuDraw {
             return false;
         }
         int drawIndex = pendingDrawIndex(player);
+        if (drawIndex != DaotuRun.draws(player) + 1) return false;
 
         // 1. 扣池
         DaotuRun.setPool(player, pool - threshold);
@@ -157,6 +159,9 @@ public final class DaotuDraw {
         DaotuRun.setDraws(player, drawIndex);
         DaotuRun.clearOffer(player);
 
+        // Settle any deferred legacy conversion before publishing the new state.
+        DaotuMigrate.migrateIfNeeded(player);
+
         // 5. 刷新
         DaotuAttributes.sync(player);
         DaotuNet.sendState(player);
@@ -166,7 +171,6 @@ public final class DaotuDraw {
                 "§6[道途] §e第 " + drawIndex + " 抽 §7· §f" + picked.label()
                         + " §7（已锁定）"), false);
 
-        // 7. 如果还有余量，继续弹下一次
         tryDraw(player);
         return true;
     }
@@ -194,7 +198,35 @@ public final class DaotuDraw {
     /** 当前待选候选（空 = 无待选）。 */
     public static List<DaotuDrawTable.Candidate> pendingOffer(ServerPlayer player) {
         String enc = DaotuRun.offer(player);
-        return enc.isEmpty() ? List.of() : decode(enc);
+        return enc.isEmpty() ? List.of() : decode(enc).stream().filter(DaotuDraw::valid).toList();
+    }
+
+    private static boolean valid(DaotuDrawTable.Candidate c) {
+        return DaotuRunAttributes.isValidReward(c.key(), c.amount(), c.percent());
+    }
+
+    /** Repair before displaying; backup the original bytes and retain valid rows in order. */
+    public static boolean repairOffer(ServerPlayer player) {
+        String old = DaotuRun.offer(player);
+        if (old.isEmpty()) return false;
+        List<String> kept = new ArrayList<>();
+        String[] rows = old.split(",", -1);
+        for (String row : rows) {
+            String[] f = row.split("=", -1);
+            if (f.length != 3 || !(f[2].equals("0") || f[2].equals("1"))) continue;
+            try {
+                double amount = Double.parseDouble(f[1]);
+                if (DaotuRunAttributes.canGrant(player, f[0], amount, f[2].equals("1"))) kept.add(row);
+            } catch (NumberFormatException ignored) { }
+        }
+        boolean badIndex = DaotuRun.offerDraw(player) != DaotuRun.draws(player) + 1;
+        if (kept.size() == rows.length && !badIndex) return false;
+        DaotuData.update(player, tag -> {
+            if (!tag.contains("universal184LegacyOffer")) tag.putString("universal184LegacyOffer", old);
+        });
+        if (kept.isEmpty() || badIndex) DaotuRun.clearOffer(player);
+        else DaotuRun.setOffer(player, DaotuRun.offerDraw(player), String.join(",", kept));
+        return true;
     }
 
     /** 待选候选对应的抽次（0 = 无待选）。 */
@@ -322,17 +354,14 @@ public final class DaotuDraw {
             List<DaotuDrawTable.Candidate> cands = (next % SPECIAL_EVERY == 0)
                     ? DaotuSpecial.candidates(player, next, rnd)
                     : DaotuDrawTable.candidates(player, next, rnd);
-            if (cands.isEmpty()) {
-                break;
-            }
+            if (cands.isEmpty()) throw new IllegalStateException("migration has no candidates");
             DaotuDrawTable.Candidate c = cands.get(rnd.nextInt(cands.size()));
+            if (!DaotuRunAttributes.canGrant(player, c.key(), c.amount(), c.percent())) throw new IllegalStateException("invalid migration reward");
             apply(player, c);
             DaotuRun.addHistory(player, next + "|" + c.key() + "|" + c.amount()
                     + "|" + (c.percent() ? "1" : "0"));
             DaotuRun.setDraws(player, next);
         }
-        DaotuRun.setPool(player, 0.0);
-        DaotuAttributes.sync(player);
-        DaotuNet.sendState(player);
+
     }
 }

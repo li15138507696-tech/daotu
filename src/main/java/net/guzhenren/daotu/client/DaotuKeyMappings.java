@@ -25,7 +25,7 @@ public final class DaotuKeyMappings {
     public static final KeyMapping VIEW = new KeyMapping(
             "key.daotu.view",
             InputConstants.Type.KEYSYM,
-            GLFW.GLFW_KEY_M,
+            GLFW.GLFW_KEY_UNKNOWN,
             "key.categories.daotu");
 
     private DaotuKeyMappings() {
